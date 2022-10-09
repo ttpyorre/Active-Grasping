@@ -11,10 +11,18 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(pcl_conversions REQUIRED)
+find_package(PCL REQUIRED)
 
+
+include_directories(${PCL_INCLUDE_DIRS})
+link_directories(${PCL_LIBRARY_DIRS})
+add_definitions(${PCL_DEFINITIONS})
 add_executable(pc src/pc.cpp)
-ament_target_dependencies(pc rclcpp std_msgs geometry_msgs sensor_msgs)
+target_link_libraries (pc ${PCL_LIBRARIES})
+ament_target_dependencies(pc rclcpp std_msgs geometry_msgs sensor_msgs PCL pcl_conversions )
 
+  
 
 install(DIRECTORY launch worlds urdf
   DESTINATION share/${PROJECT_NAME}) 
