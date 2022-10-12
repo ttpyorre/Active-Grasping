@@ -18,9 +18,11 @@
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/filters/passthrough.h>
-#include <pcl/search/impl/search.hpp>
 
 
+//colcon build --packages-select vbm_project_env
+//ros2 run vbm_project_env pc
+//ros2 launch vbm_project_env simulation.launch.py
 
 int count=0;
 using std::placeholders::_1;
@@ -42,15 +44,14 @@ class PcSubscriber : public rclcpp::Node
   private:
     void topic_callback(const sensor_msgs::msg::PointCloud2 & msg) const
     {  
-      float height=msg.height;
-      float width=msg.width;
-      RCLCPP_INFO(this->get_logger(), "height='%lf'\n", height);
-      RCLCPP_INFO(this->get_logger(), "width='%lf'\n", width);
+     
+      //RCLCPP_INFO(this->get_logger(), "height='%lf'\n", height);
+      //RCLCPP_INFO(this->get_logger(), "width='%lf'\n", width);
       
-      pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud(new pcl::PointCloud<pcl::PointXYZ>);
-      pcl::PointCloud<pcl::PointXYZ>::Ptr filtered(new pcl::PointCloud<pcl::PointXYZ>);
-      pcl::PointCloud<pcl::PointXYZ>::Ptr plane_cloud(new pcl::PointCloud<pcl::PointXYZ>);
-      pcl::PassThrough<pcl::PointXYZ> pass;
+      pcl::PointCloud<pcl::PointXYZRGB>::Ptr input_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+      pcl::PointCloud<pcl::PointXYZRGB>::Ptr filtered(new pcl::PointCloud<pcl::PointXYZRGB>);
+      pcl::PointCloud<pcl::PointXYZRGB>::Ptr plane_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+      pcl::PassThrough<pcl::PointXYZRGB> pass;
       pcl::fromROSMsg(msg, *input_cloud);
       
       //cloud->points.resize (cloud->width * cloud->height);
@@ -63,7 +64,7 @@ class PcSubscriber : public rclcpp::Node
       pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
       pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
      
-      pcl::SACSegmentation<pcl::PointXYZ> seg;
+      pcl::SACSegmentation<pcl::PointXYZRGB> seg;
       
       seg.setModelType (pcl::SACMODEL_PLANE);
       seg.setMethodType (pcl::SAC_RANSAC);
@@ -78,11 +79,110 @@ class PcSubscriber : public rclcpp::Node
        
      }
      
-     pcl::ExtractIndices<pcl::PointXYZ> extract;
+     pcl::ExtractIndices<pcl::PointXYZRGB> extract;
      extract.setInputCloud (filtered);
      extract.setIndices (inliers);
      extract.setNegative (true);
      extract.filter (*plane_cloud);
+     
+   
+     pcl::NormalEstimation<pcl::PointXYZRGB, pcl::Normal> ne;
+     ne.setInputCloud (plane_cloud);
+
+     pcl::search::KdTree<pcl::PointXYZRGB>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZRGB> ());
+     ne.setSearchMethod (tree);
+
+  
+     pcl::PointCloud<pcl::Normal>::Ptr cloud_normals (new pcl::PointCloud<pcl::Normal>);
+     
+     //plane_cloud contains the oject alone
+     
+     int centroid_x  = 0,centroid_y = 0,centroid_z=0;
+     int cloud_size=0;
+      for (auto& point: *plane_cloud)
+      { cloud_size++;
+        centroid_x += point.x;
+        centroid_y += point.y;
+        centroid_z += point.z;
+      }
+      
+      
+     centroid_x=centroid_x/cloud_size;
+     centroid_y=centroid_y/cloud_size;
+     centroid_z=centroid_z/cloud_size; 
+
+     //setting viewpoint as centroid of object
+     ne.setViewPoint (centroid_x,centroid_y,centroid_z);
+     ne.setRadiusSearch (0.03);
+
+     ne.compute (*cloud_normals);
+     
+    
+    double nx1,ny1,nz1,nx2,ny2,nz2; // Normal vectors 
+    double rx,ry,rz; //Distance vector between two points  
+    double x1,y1,z1,x2,y2,z2;// Corresponding points of normals
+    double theta1,theta2;
+    double dot,mag,mag_r;
+    
+    for (auto i = 0; i < cloud_normals->size(); i++)
+    {
+        
+    for (auto j = i+1; j < cloud_normals->size(); j++)
+    {
+        //RCLCPP_INFO(this->get_logger(), "normal;_x'%lf'\n",cloud_normals->points[j].normal_x);
+        
+        //getting the normal vectors
+        nx1=cloud_normals->points[i].normal_x;
+        ny1=cloud_normals->points[i].normal_y;
+        nz1=cloud_normals->points[i].normal_z;
+        
+        nx2=cloud_normals->points[j].normal_x;
+        ny2=cloud_normals->points[j].normal_y;
+        nz2=cloud_normals->points[j].normal_z;
+        
+        // corresponding points
+        x1=(*plane_cloud)[i].x;
+        y1=(*plane_cloud)[i].y;
+        z1=(*plane_cloud)[i].z;
+        
+        x2=(*plane_cloud)[j].x;
+        y2=(*plane_cloud)[j].y;
+        z2=(*plane_cloud)[j].z;
+        
+        //*** Do angle computations here ***//
+       
+        rx=x1-x2;
+        ry=y1-y2;
+        rz=z1-z2;
+        mag_r=sqrt(rx*rx+ry*ry+rz*rz);
+        
+        //Dot_products
+        
+        dot=nx1*rx+ny1*ry+nz1*rz;
+        mag=sqrt(nx1*nx1+ny1*ny1+nz1*nz1);
+        mag=mag*mag_r;
+        theta1=acos(dot/mag);
+        
+        dot=nx2*rx+ny2*ry+nz2*rz;
+        mag=sqrt(nx2*nx2+ny2*ny2+nz2*nz2);
+        mag=mag*mag_r;
+        theta2=acos(dot/mag);
+        
+        if ((-10 < theta1 < 10 || 170 < theta1 < 190) && ((-10 < theta2 < 10 || 170 < theta2 < 190)) )
+        {
+          RCLCPP_INFO(this->get_logger(), "Good Grasp !! \n");
+          RCLCPP_INFO(this->get_logger(), "Grasp Points: \n");
+          RCLCPP_INFO(this->get_logger(), "x1='%lf' y1='%lf' z1='%lf' \n",x1,y1,z1);
+          RCLCPP_INFO(this->get_logger(), "x2='%lf' y2='%lf' z2='%lf' \n",x2,y2,z2);
+          
+        }
+     
+        
+        
+        
+    }
+    
+    }
 
       auto pc_msg = std::make_shared<sensor_msgs::msg::PointCloud2>();
       //pcl::toROSMsg(*filtered, *pc_msg);
@@ -93,6 +193,7 @@ class PcSubscriber : public rclcpp::Node
       publisher_->publish(*pc_msg);
       if(count<1)
       {pcl::io::savePCDFileASCII ("test_pcd.pcd",*filtered);
+      pcl::io::savePCDFileASCII ("input2.pcd",*input_cloud);
       }
       count+=1;
      }
