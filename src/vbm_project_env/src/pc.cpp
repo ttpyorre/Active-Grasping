@@ -24,7 +24,8 @@
 //ros2 run vbm_project_env pc
 //ros2 launch vbm_project_env simulation.launch.py
 
-int count=0;
+int count=0,indexi,indexj;
+double min=1000;
 using std::placeholders::_1;
 
 class PcSubscriber : public rclcpp::Node
@@ -44,7 +45,7 @@ class PcSubscriber : public rclcpp::Node
   private:
     void topic_callback(const sensor_msgs::msg::PointCloud2 & msg) const
     {  
-     
+      
       //RCLCPP_INFO(this->get_logger(), "height='%lf'\n", height);
       //RCLCPP_INFO(this->get_logger(), "width='%lf'\n", width);
       
@@ -168,21 +169,40 @@ class PcSubscriber : public rclcpp::Node
         mag=mag*mag_r;
         theta2=acos(dot/mag);
         
-         if ((abs(theta1)<10 || (theta1>170 &&theta1 <190)) && (abs(theta2)<10 || (theta2>170 &&theta2 <190)))
+        double dist1,dist2;
+        if ((abs(theta1)<10 || (theta1>170 &&theta1 <190)) && (abs(theta2)<10 || (theta2>170 &&theta2 <190)))
         {
-          RCLCPP_INFO(this->get_logger(), "Good Grasp !! \n");
-          RCLCPP_INFO(this->get_logger(), "Grasp Points: \n");
-          RCLCPP_INFO(this->get_logger(), "x1='%lf' y1='%lf' z1='%lf' \n",x1,y1,z1);
-          RCLCPP_INFO(this->get_logger(), "x2='%lf' y2='%lf' z2='%lf' \n",x2,y2,z2);
+          //RCLCPP_INFO(this->get_logger(), "Good Grasp !! \n");
+          //RCLCPP_INFO(this->get_logger(), "Grasp Points: \n");
+          //RCLCPP_INFO(this->get_logger(), "x1='%lf' y1='%lf' z1='%lf' \n",x1,y1,z1);
+          //RCLCPP_INFO(this->get_logger(), "x2='%lf' y2='%lf' z2='%lf' \n",x2,y2,z2);
+          
+          //calculating distance of grasp points from the centroid  
+          dist1=sqrt((centroid_x-x1)*(centroid_x-x1)+(centroid_y-y1)*(centroid_y-y1)+(centroid_z-z1)*(centroid_z-z1));
+          dist2=sqrt((centroid_x-x2)*(centroid_x-x2)+(centroid_y-y2)*(centroid_y-y2)+(centroid_z-z2)*(centroid_z-z2));
+          
+          //choosing points with minimum distance to center as best grasp point
+          if (dist1+dist2<= min)
+          {
+            min = dist1+dist2;
+            indexi = i;
+            indexj = j;
+          }
+          
           
         }
      
         
-        
-        
     }
     
     }
+    
+    RCLCPP_INFO(this->get_logger(), "Best Grasp Points !! \n");
+   
+    RCLCPP_INFO(this->get_logger(), "x1='%lf' y1='%lf' z1='%lf' \n",(*plane_cloud)[indexi].x,(*plane_cloud)[indexi].y,(*plane_cloud)[indexi].z);
+    RCLCPP_INFO(this->get_logger(), "x2='%lf' y2='%lf' z2='%lf' \n",(*plane_cloud)[indexj].x,(*plane_cloud)[indexj].y,(*plane_cloud)[indexj].z);
+    
+      
 
       auto pc_msg = std::make_shared<sensor_msgs::msg::PointCloud2>();
       //pcl::toROSMsg(*filtered, *pc_msg);
@@ -191,11 +211,7 @@ class PcSubscriber : public rclcpp::Node
       pc_msg->header.frame_id = "world";
       
       publisher_->publish(*pc_msg);
-      if(count<1)
-      {pcl::io::savePCDFileASCII ("test_pcd.pcd",*filtered);
-      pcl::io::savePCDFileASCII ("input2.pcd",*input_cloud);
-      }
-      count+=1;
+     
      }
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr subscription_;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr publisher_;
