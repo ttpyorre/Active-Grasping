@@ -168,7 +168,7 @@ class PcSubscriber : public rclcpp::Node
         mag=mag*mag_r;
         theta2=acos(dot/mag);
         
-        if ((-10 < theta1 < 10 || 170 < theta1 < 190) && ((-10 < theta2 < 10 || 170 < theta2 < 190)) )
+         if ((abs(theta1)<10 || (theta1>170 &&theta1 <190)) && (abs(theta2)<10 || (theta2>170 &&theta2 <190)))
         {
           RCLCPP_INFO(this->get_logger(), "Good Grasp !! \n");
           RCLCPP_INFO(this->get_logger(), "Grasp Points: \n");
