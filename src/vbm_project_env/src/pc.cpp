@@ -103,8 +103,8 @@ class PcSubscriber : public rclcpp::Node
      
      //plane_cloud contains the oject alone
      
-     int centroid_x  = 0, centroid_y = 0, centroid_z = 0;
-     int cloud_size = 0;
+     float centroid_x  = 0, centroid_y = 0, centroid_z = 0;
+     float cloud_size = 0;
      for (auto& point: *plane_cloud)
      { cloud_size++;
        centroid_x += point.x;
@@ -117,7 +117,8 @@ class PcSubscriber : public rclcpp::Node
      centroid_y = centroid_y / cloud_size;
      centroid_z = centroid_z / cloud_size;
 
-
+    RCLCPP_INFO(this->get_logger(), "Centroid of the grasp. \n");
+     RCLCPP_INFO(this->get_logger(), "x1='%lf' y1='%lf' z1='%lf' \n",centroid_x,centroid_y,centroid_z);
 
      // Setting viewpoint as centroid of object
      ne.setViewPoint(centroid_x, centroid_y, centroid_z);
