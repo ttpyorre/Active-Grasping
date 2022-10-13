@@ -21,6 +21,17 @@
 
 int count = 0,indexi,indexj;
 double min = 1000;
+// Going from degrees to radians
+#define deg2rad 3.14/180
+
+// The angle we use around 0deg, as well as 180deg, to get the grasps we view as good.
+#define smallanglecalc 5
+
+// Calculating the angles in radians.
+#define smallangle smallanglecalc*deg2rad
+#define largeangle1 (180 - smallanglecalc)*deg2rad
+#define largeangle2 (180 + smallanglecalc)*deg2rad
+
 using std::placeholders::_1;
 
 class PcSubscriber : public rclcpp::Node
@@ -174,24 +185,37 @@ class PcSubscriber : public rclcpp::Node
       theta2 = acos(dot/mag);
         
       double dist1, dist2;
-      if ((abs(theta1) < 5*3.14/180 || (theta1 > 175*3.14/180  && theta1 < 185*3.14/180 )) && (abs(theta2) < 5*3.14/180  || (theta2 > 175*3.14/180  && theta2 < 185*3.14/180 )) && theta1 != theta2)
+      if ((abs(theta1) < smallangle || (theta1 > largeangle1  && theta1 < largeangle2 )) && (abs(theta2) < smallangle  || (theta2 > largeangle1  && theta2 < largeangle2 )) && theta1 != theta2)
       {
         //RCLCPP_INFO(this->get_logger(), "Good Grasp !! \n");
         //RCLCPP_INFO(this->get_logger(), "Grasp Points: \n");
-        //RCLCPP_INFO(this->get_logger(), "x1='%lf' y1='%lf' z1='%lf' \n",x1,y1,z1);
-        //RCLCPP_INFO(this->get_logger(), "x2='%lf' y2='%lf' z2='%lf' \n",x2,y2,z2);
-          
-        //calculating distance of grasp points from the centroid  
+        // Giving the deg2rad value, makes it so that we don't actually output all values.
+        RCLCPP_INFO(this->get_logger(), "x1='%lf' y1='%lf' z1='%lf' \n",x1,y1,z1);
+        RCLCPP_INFO(this->get_logger(), "x2='%lf' y2='%lf' z2='%lf' \n",x2,y2,z2);
+        
+        // Let's change the color of these points to magenta. r = 255, g = 0, b = 255
+        
+        (*plane_cloud)[i].r = 255;
+        (*plane_cloud)[i].g = 0;
+        (*plane_cloud)[i].b = 255;
+
+        (*plane_cloud)[j].r = 255;
+        (*plane_cloud)[j].g = 0;
+        (*plane_cloud)[j].b = 255;
+
+
+        // Calculating distance of the grasp points from the centroid.  
         dist1 = sqrt((centroid_x - x1)*(centroid_x - x1)  +  (centroid_y - y1)*(centroid_y - y1)  +  (centroid_z - z1)*(centroid_z - z1));
         dist2 = sqrt((centroid_x - x2)*(centroid_x - x2)  +  (centroid_y - y2)*(centroid_y - y2)  +  (centroid_z - z2)*(centroid_z - z2));
           
-        //choosing points with minimum distance to center as best grasp point
+        // Choosing points with minimum distance to center as the most optimal grasp.
         if (dist1 + dist2 <= min)
         {
           min = dist1 + dist2;
           indexi = i;
           indexj = j;
-        } 
+         
+        }  
       }    
     }
 
@@ -203,7 +227,7 @@ class PcSubscriber : public rclcpp::Node
     RCLCPP_INFO(this->get_logger(), "x2='%lf' y2='%lf' z2='%lf' \n",(*plane_cloud)[indexj].x,(*plane_cloud)[indexj].y,(*plane_cloud)[indexj].z);
     
       
-
+    // We publish the point cloud.
     auto pc_msg = std::make_shared<sensor_msgs::msg::PointCloud2>();
     //pcl::toROSMsg(*filtered, *pc_msg);
     pcl::toROSMsg(*plane_cloud, *pc_msg);
@@ -215,6 +239,7 @@ class PcSubscriber : public rclcpp::Node
     }
 
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr subscription_;
+    // Let's publish the point cloud.
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr publisher_;
 };
 
