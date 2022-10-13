@@ -19,13 +19,8 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/filters/passthrough.h>
 
-
-//colcon build --packages-select vbm_project_env
-//ros2 run vbm_project_env pc
-//ros2 launch vbm_project_env simulation.launch.py
-
-int count=0,indexi,indexj;
-double min=1000;
+int count = 0,indexi,indexj;
+double min = 1000;
 using std::placeholders::_1;
 
 class PcSubscriber : public rclcpp::Node
@@ -35,7 +30,6 @@ class PcSubscriber : public rclcpp::Node
     : Node("pc_subscriber")
     {
     
-      
       subscription_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
       "/realsense/points", 10, std::bind(&PcSubscriber::topic_callback, this, _1));
       publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("output_cloud", 10);
@@ -58,7 +52,7 @@ class PcSubscriber : public rclcpp::Node
       //cloud->points.resize (cloud->width * cloud->height);
       pass.setInputCloud (input_cloud);
       pass.setFilterFieldName ("z");
-      pass.setFilterLimits (0.0,1);
+      pass.setFilterLimits (0.0, 1);
     
       pass.filter (*filtered);
 
@@ -98,103 +92,107 @@ class PcSubscriber : public rclcpp::Node
      
      //plane_cloud contains the oject alone
      
-     int centroid_x  = 0,centroid_y = 0,centroid_z=0;
-     int cloud_size=0;
-      for (auto& point: *plane_cloud)
-      { cloud_size++;
-        centroid_x += point.x;
-        centroid_y += point.y;
-        centroid_z += point.z;
-      }
+     int centroid_x  = 0, centroid_y = 0, centroid_z = 0;
+     int cloud_size = 0;
+     for (auto& point: *plane_cloud)
+     { cloud_size++;
+       centroid_x += point.x;
+       centroid_y += point.y;
+       centroid_z += point.z;
+     }
       
       
-     centroid_x=centroid_x/cloud_size;
-     centroid_y=centroid_y/cloud_size;
-     centroid_z=centroid_z/cloud_size; 
+     centroid_x = centroid_x / cloud_size;
+     centroid_y = centroid_y / cloud_size;
+     centroid_z = centroid_z / cloud_size; 
 
-     //setting viewpoint as centroid of object
-     ne.setViewPoint (centroid_x,centroid_y,centroid_z);
-     ne.setRadiusSearch (0.03);
+     // Setting viewpoint as centroid of object
+     ne.setViewPoint(centroid_x, centroid_y, centroid_z);
+     ne.setRadiusSearch(0.03);
 
-     ne.compute (*cloud_normals);
+     ne.compute(*cloud_normals);
      
     
-    double nx1,ny1,nz1,nx2,ny2,nz2; // Normal vectors 
-    double rx,ry,rz; //Distance vector between two points  
-    double x1,y1,z1,x2,y2,z2;// Corresponding points of normals
-    double theta1,theta2;
-    double dot,mag,mag_r;
+    double nx1, ny1, nz1; 
+    double nx2, ny2, nz2;   // Normal vectors 
+    
+    double rx, ry, rz;      //Distance vector between the two points  
+    
+    double x1, y1, z1;
+    double x2, y2, z2;      // Corresponding points of normals
+    
+    double theta1, theta2;
+    double dot, mag, mag_r;
     
     for (auto i = 0; i < cloud_normals->size(); i++)
     {
         
     for (auto j = i+1; j < cloud_normals->size(); j++)
     {
-        //RCLCPP_INFO(this->get_logger(), "normal;_x'%lf'\n",cloud_normals->points[j].normal_x);
+      //RCLCPP_INFO(this->get_logger(), "normal;_x'%lf'\n",cloud_normals->points[j].normal_x);
         
-        //getting the normal vectors
-        nx1=cloud_normals->points[i].normal_x;
-        ny1=cloud_normals->points[i].normal_y;
-        nz1=cloud_normals->points[i].normal_z;
+      //getting the normal vectors
+      nx1 = cloud_normals->points[i].normal_x;
+      ny1 = cloud_normals->points[i].normal_y;
+      nz1 = cloud_normals->points[i].normal_z;
         
-        nx2=cloud_normals->points[j].normal_x;
-        ny2=cloud_normals->points[j].normal_y;
-        nz2=cloud_normals->points[j].normal_z;
+      nx2 = cloud_normals->points[j].normal_x;
+      ny2 = cloud_normals->points[j].normal_y;
+      nz2 = cloud_normals->points[j].normal_z;
         
-        // corresponding points
-        x1=(*plane_cloud)[i].x;
-        y1=(*plane_cloud)[i].y;
-        z1=(*plane_cloud)[i].z;
+      // corresponding points
+      x1 = (*plane_cloud)[i].x;
+      y1 = (*plane_cloud)[i].y;
+      z1 = (*plane_cloud)[i].z;
         
-        x2=(*plane_cloud)[j].x;
-        y2=(*plane_cloud)[j].y;
-        z2=(*plane_cloud)[j].z;
+      x2 = (*plane_cloud)[j].x;
+      y2 = (*plane_cloud)[j].y;
+      z2 = (*plane_cloud)[j].z;
         
-        //*** Do angle computations here ***//
+      //*** Do angle computations here ***//
        
-        rx=x1-x2;
-        ry=y1-y2;
-        rz=z1-z2;
-        mag_r=sqrt(rx*rx+ry*ry+rz*rz);
+      rx = x1 - x2;
+      ry = y1 - y2;
+      rz = z1 - z2;
+      mag_r = sqrt(rx*rx + ry*ry + rz*rz);
         
-        //Dot_products
+      // Dot_products
+      // Getting Theta1  
+      dot = nx1*rx + ny1*ry + nz1*rz;
+      mag = sqrt(nx1*nx1 + ny1*ny1 + nz1*nz1);
+      mag = mag*mag_r;
+      
+      theta1 = acos(dot/mag);
+      
+      // Then Theta2
+      dot = nx2*rx + ny2*ry + nz2*rz;
+      mag = sqrt(nx2*nx2 + ny2*ny2 + nz2*nz2);
+      mag = mag*mag_r;
+      
+      theta2 = acos(dot/mag);
         
-        dot=nx1*rx+ny1*ry+nz1*rz;
-        mag=sqrt(nx1*nx1+ny1*ny1+nz1*nz1);
-        mag=mag*mag_r;
-        theta1=acos(dot/mag);
-        
-        dot=nx2*rx+ny2*ry+nz2*rz;
-        mag=sqrt(nx2*nx2+ny2*ny2+nz2*nz2);
-        mag=mag*mag_r;
-        theta2=acos(dot/mag);
-        
-        double dist1,dist2;
-        if ((abs(theta1)<10 || (theta1>170 &&theta1 <190)) && (abs(theta2)<10 || (theta2>170 &&theta2 <190)))
+      double dist1, dist2;
+      if ((abs(theta1) < 10 || (theta1 > 170 && theta1 < 190)) && (abs(theta2) < 10 || (theta2 > 170 && theta2 < 190)))
+      {
+        //RCLCPP_INFO(this->get_logger(), "Good Grasp !! \n");
+        //RCLCPP_INFO(this->get_logger(), "Grasp Points: \n");
+        //RCLCPP_INFO(this->get_logger(), "x1='%lf' y1='%lf' z1='%lf' \n",x1,y1,z1);
+        //RCLCPP_INFO(this->get_logger(), "x2='%lf' y2='%lf' z2='%lf' \n",x2,y2,z2);
+          
+        //calculating distance of grasp points from the centroid  
+        dist1 = sqrt((centroid_x - x1)*(centroid_x - x1)  +  (centroid_y - y1)*(centroid_y - y1)  +  (centroid_z - z1)*(centroid_z - z1));
+        dist2 = sqrt((centroid_x - x2)*(centroid_x - x2)  +  (centroid_y - y2)*(centroid_y - y2)  +  (centroid_z - z2)*(centroid_z - z2));
+          
+        //choosing points with minimum distance to center as best grasp point
+        if (dist1 + dist2 <= min)
         {
-          //RCLCPP_INFO(this->get_logger(), "Good Grasp !! \n");
-          //RCLCPP_INFO(this->get_logger(), "Grasp Points: \n");
-          //RCLCPP_INFO(this->get_logger(), "x1='%lf' y1='%lf' z1='%lf' \n",x1,y1,z1);
-          //RCLCPP_INFO(this->get_logger(), "x2='%lf' y2='%lf' z2='%lf' \n",x2,y2,z2);
-          
-          //calculating distance of grasp points from the centroid  
-          dist1=sqrt((centroid_x-x1)*(centroid_x-x1)+(centroid_y-y1)*(centroid_y-y1)+(centroid_z-z1)*(centroid_z-z1));
-          dist2=sqrt((centroid_x-x2)*(centroid_x-x2)+(centroid_y-y2)*(centroid_y-y2)+(centroid_z-z2)*(centroid_z-z2));
-          
-          //choosing points with minimum distance to center as best grasp point
-          if (dist1+dist2<= min)
-          {
-            min = dist1+dist2;
-            indexi = i;
-            indexj = j;
-          }
-          
-          
-        }
-     
-        
+          min = dist1 + dist2;
+          indexi = i;
+          indexj = j;
+        } 
+      }    
     }
-    
+
     }
     
     RCLCPP_INFO(this->get_logger(), "Best Grasp Points !! \n");
@@ -204,15 +202,16 @@ class PcSubscriber : public rclcpp::Node
     
       
 
-      auto pc_msg = std::make_shared<sensor_msgs::msg::PointCloud2>();
-      //pcl::toROSMsg(*filtered, *pc_msg);
-      pcl::toROSMsg(*plane_cloud, *pc_msg);
-      //pcl::toROSMsg(*input_cloud, *pc_msg);
-      pc_msg->header.frame_id = "world";
+    auto pc_msg = std::make_shared<sensor_msgs::msg::PointCloud2>();
+    //pcl::toROSMsg(*filtered, *pc_msg);
+    pcl::toROSMsg(*plane_cloud, *pc_msg);
+    //pcl::toROSMsg(*input_cloud, *pc_msg);
+    pc_msg->header.frame_id = "world";
       
-      publisher_->publish(*pc_msg);
+    publisher_->publish(*pc_msg);
      
-     }
+    }
+
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr subscription_;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr publisher_;
 };
