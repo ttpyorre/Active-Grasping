@@ -25,7 +25,7 @@ double min = 1000;
 #define deg2rad 3.14/180
 
 // The angle we use around 0deg, as well as 180deg, to get the grasps we view as good.
-#define smallanglecalc 5
+#define smallanglecalc 30
 
 // Calculating the angles in radians.
 #define smallangle smallanglecalc*deg2rad
@@ -194,7 +194,7 @@ class PcSubscriber : public rclcpp::Node
         RCLCPP_INFO(this->get_logger(), "x2='%lf' y2='%lf' z2='%lf' \n",x2,y2,z2);
         
         // Let's change the color of these points to magenta. r = 255, g = 0, b = 255
-        
+        /**
         (*plane_cloud)[i].r = 255;
         (*plane_cloud)[i].g = 0;
         (*plane_cloud)[i].b = 255;
@@ -202,7 +202,7 @@ class PcSubscriber : public rclcpp::Node
         (*plane_cloud)[j].r = 255;
         (*plane_cloud)[j].g = 0;
         (*plane_cloud)[j].b = 255;
-
+        **/
 
         // Calculating distance of the grasp points from the centroid.  
         dist1 = sqrt((centroid_x - x1)*(centroid_x - x1)  +  (centroid_y - y1)*(centroid_y - y1)  +  (centroid_z - z1)*(centroid_z - z1));
@@ -226,6 +226,13 @@ class PcSubscriber : public rclcpp::Node
     RCLCPP_INFO(this->get_logger(), "x1='%lf' y1='%lf' z1='%lf' \n",(*plane_cloud)[indexi].x,(*plane_cloud)[indexi].y,(*plane_cloud)[indexi].z);
     RCLCPP_INFO(this->get_logger(), "x2='%lf' y2='%lf' z2='%lf' \n",(*plane_cloud)[indexj].x,(*plane_cloud)[indexj].y,(*plane_cloud)[indexj].z);
     
+        (*plane_cloud)[indexi].r = 255;
+        (*plane_cloud)[indexi].g = 0;
+        (*plane_cloud)[indexi].b = 255;
+
+        (*plane_cloud)[indexj].r = 255;
+        (*plane_cloud)[indexj].g = 0;
+        (*plane_cloud)[indexj].b = 255;
       
     // We publish the point cloud.
     auto pc_msg = std::make_shared<sensor_msgs::msg::PointCloud2>();

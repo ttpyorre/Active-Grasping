@@ -29,9 +29,7 @@ def generate_launch_description():
                         arguments=['-file',simulation_urdf_path,
                                     '-entity','camera',
                                     '-x','0.5',
-                                    '-y','0.2',
-                                    '-z','1',
-                                    '-Y','0.52',
+                                    '-z', '1',
                                     '-P','2.356'],
                         output='both' )
 
