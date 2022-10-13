@@ -104,7 +104,9 @@ class PcSubscriber : public rclcpp::Node
       
      centroid_x = centroid_x / cloud_size;
      centroid_y = centroid_y / cloud_size;
-     centroid_z = centroid_z / cloud_size; 
+     centroid_z = centroid_z / cloud_size;
+
+
 
      // Setting viewpoint as centroid of object
      ne.setViewPoint(centroid_x, centroid_y, centroid_z);
@@ -172,7 +174,7 @@ class PcSubscriber : public rclcpp::Node
       theta2 = acos(dot/mag);
         
       double dist1, dist2;
-      if ((abs(theta1) < 10 || (theta1 > 170 && theta1 < 190)) && (abs(theta2) < 10 || (theta2 > 170 && theta2 < 190)))
+      if ((abs(theta1) < 5*3.14/180 || (theta1 > 175*3.14/180  && theta1 < 185*3.14/180 )) && (abs(theta2) < 5*3.14/180  || (theta2 > 175*3.14/180  && theta2 < 185*3.14/180 )) && theta1 != theta2)
       {
         //RCLCPP_INFO(this->get_logger(), "Good Grasp !! \n");
         //RCLCPP_INFO(this->get_logger(), "Grasp Points: \n");
